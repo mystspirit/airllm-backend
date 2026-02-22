@@ -6,7 +6,8 @@ import urllib.request
 from contextlib import closing
 from http.server import ThreadingHTTPServer
 
-from app.main import AirLLMRequestHandler
+from app.airllm_service import build_import_error_message
+from app.main import AirLLMRequestHandler, public_url
 
 
 class MockService:
@@ -31,6 +32,22 @@ class MockService:
         if not self.loaded:
             raise RuntimeError("Model is not loaded. Load a model first from the web UI or API.")
         return f"{prompt} [{max_new_tokens}]"
+
+
+class AirllmDependencyErrorMessageTest(unittest.TestCase):
+    def test_missing_bettertransformer_message(self):
+        msg = build_import_error_message(ModuleNotFoundError("No module named 'optimum.bettertransformer'"))
+        self.assertIn("optimum<2", msg)
+        self.assertIn("optimum.bettertransformer", msg)
+
+
+class UrlFormattingTest(unittest.TestCase):
+    def test_public_url_for_all_interfaces(self):
+        self.assertEqual(public_url("0.0.0.0", 8000), "http://localhost:8000")
+        self.assertEqual(public_url("::", 8000), "http://localhost:8000")
+
+    def test_public_url_for_specific_interface(self):
+        self.assertEqual(public_url("127.0.0.1", 8000), "http://127.0.0.1:8000")
 
 
 class ApiTest(unittest.TestCase):

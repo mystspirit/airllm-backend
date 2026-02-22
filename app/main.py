@@ -99,9 +99,15 @@ class AirLLMRequestHandler(BaseHTTPRequestHandler):
         return
 
 
+def public_url(host: str, port: int) -> str:
+    if host in {"0.0.0.0", "::"}:
+        return f"http://localhost:{port}"
+    return f"http://{host}:{port}"
+
+
 def run(host: str = "0.0.0.0", port: int = 8000) -> None:
     server = ThreadingHTTPServer((host, port), AirLLMRequestHandler)
-    print(f"AirLLM backend is running on http://{host}:{port}")
+    print(f"AirLLM backend is running on {public_url(host, port)}")
     server.serve_forever()
 
 

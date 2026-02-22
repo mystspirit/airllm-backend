@@ -13,6 +13,7 @@
       textarea { min-height: 140px; resize: vertical; }
       button { background: #3b82f6; border: 0; color: white; padding: 0.7rem 1rem; border-radius: 8px; cursor: pointer; }
       button:hover { background: #2563eb; }
+      button:disabled { opacity: 0.6; cursor: wait; }
       .row { display: grid; gap: 0.75rem; }
       .status { font-size: 0.95rem; color: #93c5fd; }
       pre { white-space: pre-wrap; background: #0b1220; padding: 0.8rem; border-radius: 8px; }
@@ -46,6 +47,7 @@
     <script>
       const statusEl = document.getElementById('status');
       const outputEl = document.getElementById('output');
+      const loadModelBtn = document.getElementById('loadModel');
 
       async function refreshStatus() {
         const response = await fetch('/api/status');
@@ -57,19 +59,31 @@
         const modelName = document.getElementById('modelName').value.trim();
         if (!modelName) return;
 
-        const response = await fetch('/api/load-model', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model_name: modelName })
-        });
+        loadModelBtn.disabled = true;
+        loadModelBtn.textContent = 'Loading model...';
+        statusEl.textContent = `Loading model '${modelName}'. This can take a while for large models...`;
 
-        if (!response.ok) {
-          const err = await response.json();
-          alert(err.detail ?? 'Failed to load model');
-          return;
+        try {
+          const response = await fetch('/api/load-model', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model_name: modelName })
+          });
+
+          const data = await response.json();
+          if (!response.ok) {
+            statusEl.textContent = data.detail ?? 'Failed to load model';
+            return;
+          }
+
+          statusEl.textContent = `Model loaded: ${data.model_name ?? modelName}`;
+          await refreshStatus();
+        } catch (error) {
+          statusEl.textContent = `Request failed: ${error?.message ?? error}`;
+        } finally {
+          loadModelBtn.disabled = false;
+          loadModelBtn.textContent = 'Load model';
         }
-
-        await refreshStatus();
       }
 
       async function generate() {
@@ -94,7 +108,7 @@
       }
 
       document.getElementById('refreshStatus').addEventListener('click', refreshStatus);
-      document.getElementById('loadModel').addEventListener('click', loadModel);
+      loadModelBtn.addEventListener('click', loadModel);
       document.getElementById('generate').addEventListener('click', generate);
       refreshStatus();
     </script>

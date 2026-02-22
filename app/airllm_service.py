@@ -11,6 +11,25 @@ class AirLLMStatus:
     message: str
 
 
+def build_import_error_message(exc: Exception) -> str:
+    error_text = str(exc)
+    base = (
+        "AirLLM dependencies are not available. "
+        "Install them with `pip install airllm \"optimum<2\"`. "
+    )
+
+    if "optimum.bettertransformer" in error_text:
+        return (
+            base
+            + "Your installed `optimum` version is likely incompatible with AirLLM "
+            "(missing module `optimum.bettertransformer`). "
+            "Try: `pip install --upgrade --force-reinstall \"optimum<2\" airllm`. "
+            f"Import error: {error_text}"
+        )
+
+    return base + f"Import error: {error_text}"
+
+
 class AirLLMService:
     def __init__(self) -> None:
         self._airllm_cls = None
@@ -25,10 +44,7 @@ class AirLLMService:
 
             self._airllm_cls = airllm_cls
         except Exception as exc:  # noqa: BLE001
-            self._import_error = (
-                "AirLLM package is not available. Install it with `pip install airllm`. "
-                f"Import error: {exc}"
-            )
+            self._import_error = build_import_error_message(exc)
 
     def load_model(self, model_name: str) -> AirLLMStatus:
         if self._airllm_cls is None:

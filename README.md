@@ -41,6 +41,69 @@ Potom otvor:
 
 - `http://localhost:8000`
 
+
+## Riešenie chyby ERR_ADDRESS_INVALID
+
+Ak si skopíroval adresu `http://0.0.0.0:8000`, prehliadač ju často odmietne (`ERR_ADDRESS_INVALID`).
+
+Použi jednu z týchto adries:
+
+- `http://localhost:8000`
+- `http://127.0.0.1:8000`
+
+`0.0.0.0` je bind adresa servera (načúva na všetkých rozhraniach), ale nie je to adresa určená na otvorenie v prehliadači.
+
+Ak stále stránka nejde:
+
+1. skontroluj, či server beží (`python -m app.main`)
+2. skontroluj, či port 8000 nie je obsadený
+3. na inom zariadení v sieti použi IP adresu počítača, napr. `http://192.168.1.25:8000`
+
+
+## Chyba: `No module named 'optimum.bettertransformer'`
+
+Táto chyba znamená, že AirLLM je nainštalované, ale verzia závislosti `optimum` je nekompatibilná.
+
+Riešenie vo virtuálnom prostredí:
+
+```bash
+pip install --upgrade --force-reinstall "optimum<2" airllm
+```
+
+Potom reštartuj backend:
+
+```bash
+python -m app.main
+```
+
+Ak používaš čisté prostredie, odporúčaný postup je: vytvoriť nové venv, nainštalovať závislosti a až potom AirLLM.
+
+## GitHub repo neodráža zmeny?
+
+Ak nevidíš nové commity na GitHube, zmeny sú pravdepodobne len lokálne.
+
+Skontroluj remote:
+
+```bash
+git remote -v
+```
+
+Ak je výstup prázdny, nastav remote:
+
+```bash
+git remote add origin <URL_TVOJHO_REPA>
+```
+
+Potom pushni vetvu:
+
+```bash
+git push -u origin work
+```
+
+Ak používaš inú vetvu, nahraď `work` názvom svojej vetvy (zistíš cez `git branch --show-current`).
+
+Pri pushi ťa môže GitHub vyzvať na autentifikáciu (PAT token alebo SSH kľúč).
+
 ## API endpointy
 
 - `GET /api/status`
