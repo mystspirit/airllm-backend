@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AirLLM Browser Backend</title>
+    <style>
+      :root { font-family: system-ui, sans-serif; }
+      body { margin: 0; background: #0f172a; color: #e2e8f0; }
+      .container { max-width: 900px; margin: 2rem auto; padding: 1rem; }
+      .card { background: #1e293b; border-radius: 12px; padding: 1rem; margin-bottom: 1rem; }
+      input, textarea { width: 100%; padding: 0.7rem; border-radius: 8px; border: 1px solid #475569; background: #0b1220; color: #e2e8f0; }
+      textarea { min-height: 140px; resize: vertical; }
+      button { background: #3b82f6; border: 0; color: white; padding: 0.7rem 1rem; border-radius: 8px; cursor: pointer; }
+      button:hover { background: #2563eb; }
+      button:disabled { opacity: 0.6; cursor: wait; }
+      .row { display: grid; gap: 0.75rem; }
+      .status { font-size: 0.95rem; color: #93c5fd; }
+      pre { white-space: pre-wrap; background: #0b1220; padding: 0.8rem; border-radius: 8px; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>AirLLM Browser Backend</h1>
+
+      <section class="card row">
+        <h3>Status</h3>
+        <div id="status" class="status">Loading...</div>
+        <button id="refreshStatus">Refresh status</button>
+      </section>
+
+      <section class="card row">
+        <h3>Load model</h3>
+        <input id="modelName" placeholder="e.g. garage-bAInd/Platypus2-7B-instruct" />
+        <button id="loadModel">Load model</button>
+      </section>
+
+      <section class="card row">
+        <h3>Generate</h3>
+        <textarea id="prompt" placeholder="Write your prompt..."></textarea>
+        <input id="maxTokens" type="number" min="1" max="2048" value="128" />
+        <button id="generate">Generate</button>
+        <pre id="output">Output will appear here...</pre>
+      </section>
+    </div>
+
+    <script>
+      const statusEl = document.getElementById('status');
+      const outputEl = document.getElementById('output');
+      const loadModelBtn = document.getElementById('loadModel');
+
+      async function refreshStatus() {
+        const response = await fetch('/api/status');
+        const data = await response.json();
+        statusEl.textContent = `installed=${data.installed}, model_loaded=${data.model_loaded}, model_name=${data.model_name ?? '-'}, message=${data.message}`;
+      }
+
+      async function loadModel() {
+        const modelName = document.getElementById('modelName').value.trim();
+        if (!modelName) return;
+
+        loadModelBtn.disabled = true;
+        loadModelBtn.textContent = 'Loading model...';
+        statusEl.textContent = `Loading model '${modelName}'. This can take a while for large models...`;
+
+        try {
+          const response = await fetch('/api/load-model', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model_name: modelName })
+          });
+
+          const data = await response.json();
+          if (!response.ok) {
+            statusEl.textContent = data.detail ?? 'Failed to load model';
+            return;
+          }
+
+          statusEl.textContent = `Model loaded: ${data.model_name ?? modelName}`;
+          await refreshStatus();
+        } catch (error) {
+          statusEl.textContent = `Request failed: ${error?.message ?? error}`;
+        } finally {
+          loadModelBtn.disabled = false;
+          loadModelBtn.textContent = 'Load model';
+        }
+      }
+
+      async function generate() {
+        const prompt = document.getElementById('prompt').value.trim();
+        const maxNewTokens = Number(document.getElementById('maxTokens').value);
+        if (!prompt) return;
+
+        outputEl.textContent = 'Generating...';
+        const response = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt, max_new_tokens: maxNewTokens })
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          outputEl.textContent = data.detail ?? 'Generation failed';
+          return;
+        }
+
+        outputEl.textContent = data.output;
+      }
+
+      document.getElementById('refreshStatus').addEventListener('click', refreshStatus);
+      loadModelBtn.addEventListener('click', loadModel);
+      document.getElementById('generate').addEventListener('click', generate);
+      refreshStatus();
+    </script>
+  </body>
+</html>
